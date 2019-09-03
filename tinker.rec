@@ -1,0 +1,119 @@
+BootStrap: docker
+From: centos:latest
+IncludeCmd: yes
+%setup
+
+%files
+
+%environment
+PATH="$PATH:/usr/lib64/openmpi/bin/"
+LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/usr/lib64/openmpi/lib/:/opt/intel/compilers_and_libraries_2018.2.199/linux/mkl/lib/intel64_lin/:/opt/intel/compilers_and_libraries_2018.2.199/linux/compiler/lib/intel64_lin/"
+MPI_ROOT=/usr/lib64/openmpi/
+export PATH
+export LD_LIBRARY_PATH
+export MPI_ROOT
+
+%runscript
+  exec mpirun -np 8 /opt/Tinker-HP/v1.1/bin/dynamic "$@"
+
+%apprun analyze
+  exec /opt/Tinker-HP/v1.1/bin/analyze "$@"
+
+%apprun dynamic
+  exec /opt/Tinker-HP/v1.1/bin/dynamic "$@"
+
+%apprun minimize
+  exec /opt/Tinker-HP/v1.1/bin/minimize "$@"
+  
+%apprun testgrad
+  exec /opt/Tinker-HP/v1.1/bin/testgrad "$@"
+
+%post
+    # commands to be executed inside container during bootstrap
+    # add python and install some packages
+    yum -y update
+    yum -y install epel-release \
+      terminator \
+      centos-release-scl
+    yum -y install vte-devel \
+      vte291-devel \
+      vte-profile \
+    yum -y groups install "Development Tools"
+    yum -y groups install "Base"
+    yum -y install git cmake binutils \
+      libX11-devel libXpm-devel libXft-devel libXext-devel \
+      openssl-devel pcre-devel \
+      mesa-libGL-devel mesa-libGLU-devel glew-devel ftgl-devel mysql-devel \
+      fftw-devel cfitsio-devel graphviz-devel \
+      avahi-compat-libdns_sd-devel libldap-dev python-devel python36-devel python36-pip \
+      libxml2-devel gsl-devel \
+      cmake3 \
+      hdf5-devel \
+      patch \
+      qt5-qtbase-devel \
+      qt5-qtsvg-devel \
+      numpy eigen3-devel zlib-devel libqt4-devel libtiff-devel \
+      bzip2 ca-certificates \
+      libglib2.0-0 libxext6 libsm6 libxrender1 \
+      mercurial subversion \
+      mesa-libGLU-devel.i686 \
+      mesa-libGL-devel.i686 \
+      libcanberra-gtk* \
+      Lmod mlocate
+      
+    yum -y update
+    updatedb
+    yum -y install gcc gcc-gfortran gcc-c++
+    #yum -y install devtoolset-8-gcc*
+   
+    mkdir -p /storage/home
+    mkdir -p /storage/work
+    mkdir -p /gpfs/scratch
+    mkdir -p /gpfs/group
+    mkdir -p /var/spool/torque
+    
+    # Make symlinks
+    ln -s `which qmake-qt5` /usr/local/bin/qmake
+    ln -s `which moc-qt5` /usr/local/bin/moc
+    ln -s `which rcc-qt5` /usr/local/bin/rcc
+    ln -s `which vim` /usr/local/bin/vi
+    
+    ldconfig -n /usr/lib64/openmpi/lib/
+    
+    # Install OpenMPI 2.1.6
+    cd /tmp/
+    wget https://download.open-mpi.org/release/open-mpi/v2.1/openmpi-2.1.6.tar.gz
+    tar -xf openmpi-2.1.6.tar.gz
+    cd openmpi-2.1.6
+    #source /opt/rh/devtoolset-8/enable
+    ./configure --prefix=/usr/lib64/openmpi/bin/
+    make
+    make install
+    cd ..
+    rm -rf openmpi-2.1.6*
+
+   #install mkl
+    yum-config-manager --add-repo https://yum.repos.intel.com/mkl/setup/intel-mkl.repo
+    rpm --import https://yum.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS-2019.PUB
+    yum -y update
+    yum -y install intel-mkl-2018.2-046
+
+    export MPI_ROOT=/usr/lib64/openmpi/
+    export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/lib64/openmpi/lib/
+    export PATH='$PATH:/usr/lib64/openmpi/bin/'
+
+    cd /opt/
+    export PATH=$PATH:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/lib64/openmpi/bin/
+    git clone https://github.com/TinkerTools/Tinker-HP
+    cd Tinker-HP/v1.1/2decomp_fft/src
+    sed 's/FFT=fftw3_f03/FFT=generic/g' -i Makefile.inc
+    mkdir ../include
+    make
+
+    cd ../../source
+    sed 's\-L$(MKLDIR)/lib/intel64\-L$(MKLDIR)/lib/intel64 -L/opt/intel/compilers_and_libraries_2018.2.199/linux/compiler/lib/intel64_lin\g' -i Makefile
+    mkdir ../bin
+    make
+
+
+
