@@ -14,19 +14,19 @@ export LD_LIBRARY_PATH
 export MPI_ROOT
 
 %runscript
-  exec mpirun -np 8 /opt/Tinker-HP/v1.1/bin/dynamic "$@"
+  exec mpirun --hostfile $PBS_NODEFILE /opt/Tinker-HP/v1.1/bin/dynamic "$@"
 
 %apprun analyze
-  exec /opt/Tinker-HP/v1.1/bin/analyze "$@"
+  exec mpirun --hostfile $PBS_NODEFILE /opt/Tinker-HP/v1.1/bin/analyze "$@"
 
 %apprun dynamic
-  exec /opt/Tinker-HP/v1.1/bin/dynamic "$@"
+  exec mpirun --hostfile $PBS_NODEFILE /opt/Tinker-HP/v1.1/bin/dynamic "$@"
 
 %apprun minimize
-  exec /opt/Tinker-HP/v1.1/bin/minimize "$@"
+  exec mpirun --hostfile $PBS_NODEFILE /opt/Tinker-HP/v1.1/bin/minimize "$@"
   
 %apprun testgrad
-  exec /opt/Tinker-HP/v1.1/bin/testgrad "$@"
+  exec mpirun --hostfile $PBS_NODEFILE /opt/Tinker-HP/v1.1/bin/testgrad "$@"
 
 %post
     # commands to be executed inside container during bootstrap
